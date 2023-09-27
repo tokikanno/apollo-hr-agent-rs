@@ -2,6 +2,7 @@ mod apollo;
 
 use std::fs::File;
 use std::io::Write;
+use std::process;
 
 use crate::apollo::agent::{ApolloAgent, PunchType};
 use apollo::utils::sleep_until;
@@ -78,15 +79,25 @@ fn write_config_file(config_name: &String, username: &String, password: &String,
         .unwrap();
 }
 
-fn prepare_agent(config_name: &String) -> ApolloAgent {
+fn prepare_agent(config_name: &String) -> Result<ApolloAgent, String> {
     let config_filename = get_config_filename(config_name);
-    let file = File::open(config_filename).unwrap();
-    let config: ConfigPayload = serde_json::from_reader(file).unwrap();
+    let file = File::open(&config_filename).map_err(|e| {
+        format!(
+            r#"can't open {}
+reason: {}
+
+if this is your first time usage, try call init subcommand first,
+        "#,
+            &config_filename, e
+        )
+    })?;
+    let config: ConfigPayload = serde_json::from_reader(file)
+        .map_err(|e| format!("can't parse {} into json.\nreason: {}", &config_filename, e))?;
+
     let mut agent = ApolloAgent::new(config.username, config.password, config.company);
+    agent.login()?;
 
-    agent.login().unwrap();
-
-    return agent;
+    Ok(agent)
 }
 
 fn print_calendars(agent: &ApolloAgent) {
@@ -187,7 +198,13 @@ fn main() {
         } => write_config_file(&args.config, &username, &password, &company),
 
         _ => {
-            let mut agent = prepare_agent(&args.config);
+            let mut agent = match prepare_agent(&args.config) {
+                Ok(v) => v,
+                Err(e) => {
+                    println!("{}", e);
+                    process::exit(-1);
+                }
+            };
 
             match args.command {
                 SubCommands::AutoPunch {} => auto_punch(&mut agent),
