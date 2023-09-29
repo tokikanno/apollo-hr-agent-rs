@@ -59,11 +59,11 @@ struct ConfigPayload {
 }
 
 fn get_config_filename(config_name: &String) -> String {
-    return if config_name.ends_with(".json") {
+    if config_name.ends_with(".json") {
         config_name.clone()
     } else {
         format!("{}.json", config_name)
-    };
+    }
 }
 
 fn write_config_file(config_name: &String, username: &String, password: &String, company: &String) {

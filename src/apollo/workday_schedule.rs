@@ -27,7 +27,7 @@ impl Display for WorkdaySchedule {
 }
 
 fn parse_as_local_time(v: &Value) -> Option<DateTime<Local>> {
-    return v.as_str().map_or(None, |v| {
+    return v.as_str().and_then(|v| {
         DateTime::parse_from_rfc3339(v)
             .map(|v| Some(v.with_timezone(&Local)))
             .unwrap()
@@ -50,22 +50,22 @@ impl WorkdaySchedule {
 
         let memo = json["CalendarEvent"]["EventMemo"]
             .as_str()
-            .map_or(None, |v| Some(v.to_string()));
+            .map(|v| v.to_string());
 
-        return WorkdaySchedule {
+        WorkdaySchedule {
             date,
             work_on_time,
             work_off_time,
             memo,
-        };
+        }
     }
 
     pub fn is_work_day(&self) -> bool {
-        return self.work_on_time.is_some() || self.work_off_time.is_some();
+        self.work_on_time.is_some() || self.work_off_time.is_some()
     }
 
     pub fn description(&self) -> String {
-        return format!(
+        format!(
             "{}{}",
             if self.is_work_day() {
                 "工作日"
@@ -75,7 +75,7 @@ impl WorkdaySchedule {
             self.memo
                 .as_ref()
                 .map_or("".to_string(), |v| format!("({})", v)),
-        );
+        )
     }
 
     pub fn get_date(&self) -> &str {
@@ -89,7 +89,8 @@ impl WorkdaySchedule {
     ) -> DateTime<Local> {
         let mut rng = thread_rng();
         let jitter_second = jitter.unwrap_or(60) as i64;
-        let target = match punch_type {
+
+        match punch_type {
             PunchType::PunchIn => self
                 .work_on_time
                 .map(|t| {
@@ -104,8 +105,7 @@ impl WorkdaySchedule {
                         .unwrap()
                 })
                 .unwrap(),
-        };
-        target
+        }
     }
 }
 

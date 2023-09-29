@@ -8,7 +8,7 @@ pub fn to_resp_json(resp: Response) -> Result<Value, String> {
     let status = resp.status();
     let status_code = status.as_u16();
     let json = resp.json::<Value>().unwrap();
-    let success = status.is_success() && !json.get("error").is_some();
+    let success = status.is_success() && json.get("error").is_none();
 
     if success {
         Ok(json)
